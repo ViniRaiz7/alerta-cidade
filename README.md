@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AlertaCidade
 
 Sistema de denúncias urbanas colaborativas: cidadãos registram problemas
@@ -99,3 +100,6 @@ npm run dev
 - **Containerização** com `Dockerfile` (backend) e `docker-compose.yml`
   (projeto completo), para reproduzir o ambiente de forma idêntica em
   qualquer máquina.
+=======
+# alerta-cidade
+>>>>>>> db7fdae9a90f6d86d5adf10caea0b1693b0db4a1
