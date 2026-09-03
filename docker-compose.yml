@@ -1,0 +1,62 @@
+# Orquestra os três pedaços do projeto para rodar tudo com um único comando:
+#   docker compose up --build
+#
+# - db:       PostgreSQL (banco de dados da API)
+# - backend:  API Node.js/Express (porta 3333)
+# - frontend: os arquivos estáticos do front-end, servidos por um nginx simples (porta 8080)
+#
+# O front-end ainda funciona de forma independente (via LocalStorage) — ver
+# README.md da raiz do projeto para o estágio atual da integração entre eles.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: alertacidade
+      POSTGRES_PASSWORD: alertacidade
+      POSTGRES_DB: alertacidade
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alertacidade"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://alertacidade:alertacidade@db:5432/alertacidade?schema=public"
+      PORT: 3333
+      NODE_ENV: production
+      JWT_SECRET: "troque-este-valor-em-producao"
+      JWT_EXPIRES_IN: "7d"
+      CORS_ORIGIN: "http://localhost:8080"
+      MAX_IMAGE_SIZE_MB: 8
+      MAX_VIDEO_SIZE_MB: 120
+      MAX_VIDEO_DURATION_SECONDS: 180
+    ports:
+      - "3333:3333"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
+  backend_uploads:

@@ -1,0 +1,168 @@
+// Schema do banco de dados do AlertaCidade.
+// Banco: PostgreSQL (não usamos SQLite — ver README para o motivo).
+// Após qualquer alteração aqui: `npm run prisma:generate` e `npm run prisma:migrate`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CIDADAO
+  MODERADOR
+  ADMIN
+  SUPERADMIN
+}
+
+enum Categoria {
+  BURACO
+  ILUMINACAO
+  SEMAFORO
+  LIXO
+  SEGURANCA
+}
+
+enum Status {
+  ABERTO
+  EM_ANALISE
+  EM_ANDAMENTO
+  RESOLVIDO
+  REJEITADO
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String // hash bcrypt — nunca texto plano, nunca retornado pela API
+  role      Role     @default(CIDADAO)
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  denuncias         Denuncia[]         @relation("AutorDenuncia")
+  comments          Comment[]
+  likes             Like[]
+  notifications     Notification[]
+  officialResponses OfficialResponse[]
+
+  @@map("users")
+}
+
+model Denuncia {
+  id                String    @id @default(uuid())
+  title             String
+  description       String
+  category          Categoria
+  location          String
+  status            Status    @default(ABERTO)
+  validated         Boolean   @default(false)
+  removed           Boolean   @default(false)
+  confirmedResolved Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  authorId String
+  author   User   @relation("AutorDenuncia", fields: [authorId], references: [id])
+
+  media            Media[]
+  comments         Comment[]
+  likes            Like[]
+  officialResponse OfficialResponse?
+  notifications    Notification[]
+
+  @@map("denuncias")
+  @@index([status])
+  @@index([category])
+  @@index([authorId])
+}
+
+// Cada denúncia tem no máximo uma mídia (foto OU vídeo) — mesma regra do
+// front-end. O campo fica em uma tabela própria (em vez de colunas soltas
+// em Denuncia) para já comportar múltiplos anexos no futuro sem migração.
+model Media {
+  id              String    @id @default(uuid())
+  type            MediaType
+  url             String // caminho público servido pela API, ex: /uploads/denuncias/arquivo.webm
+  durationSeconds Int? // preenchido apenas para vídeos; limite de 180s validado no upload
+  createdAt       DateTime  @default(now())
+
+  denunciaId String   @unique
+  denuncia   Denuncia @relation(fields: [denunciaId], references: [id], onDelete: Cascade)
+
+  @@map("media")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  denunciaId String
+  denuncia   Denuncia @relation(fields: [denunciaId], references: [id], onDelete: Cascade)
+
+  // suporte a respostas aninhadas (thread) — um comentário pode responder a outro
+  parentId String?
+  parent   Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("Replies")
+
+  @@map("comments")
+  @@index([denunciaId])
+  @@index([parentId])
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  denunciaId String
+  denuncia   Denuncia @relation(fields: [denunciaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, denunciaId]) // impede curtir a mesma denúncia duas vezes
+  @@map("likes")
+}
+
+model OfficialResponse {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  denunciaId String   @unique // uma resposta oficial "atual" por denúncia
+  denuncia   Denuncia @relation(fields: [denunciaId], references: [id], onDelete: Cascade)
+
+  @@map("official_responses")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  message    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  denunciaId String?
+  denuncia   Denuncia? @relation(fields: [denunciaId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+  @@index([userId, read])
+}

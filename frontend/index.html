@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>AlertaCidade — Denúncias Urbanas Colaborativas</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- fica fora de #app de propósito: um modal de câmera aberto (com stream de
+       vídeo ativo) não pode ser destruído por um re-render do app disparado
+       por outro motivo (ex.: o toast expirando). Ver comentário em ui.js/render(). -->
+  <div id="modal-root"></div>
+
+  <!-- ordem importa: camera.js e data.js não dependem um do outro,
+       mas ambos precisam existir antes de ui.js -->
+  <script src="js/camera.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
