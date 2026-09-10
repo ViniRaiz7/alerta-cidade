@@ -184,7 +184,7 @@ function mobileNavHTML(user) {
 function navItems(role) {
   const items = [{ screen: 'dashboard', label: 'Painel', icon: ICONS.grid }];
   if (role === 'cidadao' || role === 'superadmin') {
-    items.push({ screen: 'create', label: 'Nova', icon: ICONS.plus });
+    
   }
   items.push({ screen: 'profile', label: 'Perfil', icon: ICONS.user });
   if (role === 'superadmin') {
