@@ -1,6 +1,8 @@
 # Imagem de produção da API do AlertaCidade.
 FROM node:20-alpine
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # instala dependências primeiro (aproveita o cache de camadas do Docker

@@ -944,47 +944,63 @@ document.addEventListener('click', (e) => {
   if (outsideNotifClick) state.notifOpen = false;
 
   const closeModalTarget = e.target.closest('[data-action="close-modal"]');
-  if (closeModalTarget && !e.target.closest('[data-stop]')) { closeModal(); if (outsideNotifClick) render(); return; }
+  if (closeModalTarget && !e.target.closest('[data-stop]')) {
+    closeModal();
+    if (outsideNotifClick) render();
+    return;
+  }
 
   const cameraCancelTarget = e.target.closest('[data-action="camera-cancel"]');
   if (cameraCancelTarget && !e.target.closest('[data-stop]')) {
-    Camera.stop(); state.cameraOnDone = null; closeModal();
+    Camera.stop();
+    state.cameraOnDone = null;
+    closeModal();
     if (outsideNotifClick) render();
     return;
   }
 
   const el = e.target.closest('[data-action]');
-  if (!el) { if (outsideNotifClick) render(); return; }
+  if (!el) {
+    if (outsideNotifClick) render();
+    return;
+  }
+
   const action = el.dataset.action;
 
   switch (action) {
     case 'go':
       go(el.dataset.screen, el.dataset.id ? { selectedId: el.dataset.id } : { selectedId: null });
       break;
+
     case 'auth-mode':
       state.authMode = el.dataset.mode;
       render();
       break;
+
     case 'logout':
       logout();
       state.screen = 'auth';
       render();
       showToast('Você saiu da sua conta.', 'success');
       break;
+
     case 'like':
       toggleLike(el.dataset.id);
       render();
       break;
+
     case 'confirm-resolved':
       citizenConfirmResolved(el.dataset.id);
       render();
       showToast('Obrigado por confirmar! ✅', 'success');
       break;
+
     case 'mod-validate':
       moderateValidate(el.dataset.id);
       render();
       showToast('Denúncia validada.', 'success');
       break;
+
     case 'mod-remove':
       if (confirm('Remover este conteúdo? Ele deixará de ser exibido publicamente.')) {
         moderateRemove(el.dataset.id);
@@ -992,28 +1008,34 @@ document.addEventListener('click', (e) => {
         showToast('Conteúdo removido pela moderação.', 'success');
       }
       break;
+
     case 'remove-comment':
       removeComment(el.dataset.id, el.dataset.cid);
       render();
       break;
+
     case 'toggle-reply':
       state.replyingTo = state.replyingTo === el.dataset.id ? null : el.dataset.id;
       render();
       break;
+
     case 'toggle-notifications':
       state.notifOpen = !state.notifOpen;
       render();
       break;
+
     case 'mark-all-read': {
       const u = currentUser();
       if (u) markAllRead(u.id);
       render();
       break;
     }
+
     case 'open-notification':
       markOneRead(el.dataset.id);
       go('detail', { selectedId: el.dataset.denuncia });
       break;
+
     case 'discard-draft': {
       const u = currentUser();
       if (u) clearDraft(u.id);
@@ -1023,9 +1045,11 @@ document.addEventListener('click', (e) => {
       showToast('Rascunho descartado.', 'success');
       break;
     }
+
     case 'open-create-user':
       createUserModal();
       break;
+
     case 'open-reset-password':
       resetPasswordModal(el.dataset.id);
       break;
@@ -1039,10 +1063,15 @@ document.addEventListener('click', (e) => {
         onCamera: () => openCameraCapture({
           allowVideo: true,
           title: 'Capturar mídia da denúncia',
-          onDone: (res) => setDraftMedia({ type: res.type, url: res.dataUrl, durationSeconds: res.durationSeconds || null }),
+          onDone: (res) => setDraftMedia({
+            type: res.type,
+            url: res.dataUrl,
+            durationSeconds: res.durationSeconds || null
+          }),
         }),
       });
       break;
+
     case 'remove-media':
       setDraftMedia(null);
       break;
@@ -1073,6 +1102,7 @@ document.addEventListener('click', (e) => {
       if (cb && cb.onFile) cb.onFile();
       break;
     }
+
     case 'source-camera': {
       const cb = state.sourceCallbacks;
       closeModal();
@@ -1085,12 +1115,14 @@ document.addEventListener('click', (e) => {
       state.cameraMode = el.dataset.mode;
       updateCameraModeUI();
       break;
+
     case 'camera-capture-photo': {
       const videoEl = document.getElementById('camera-preview');
       const dataUrl = Camera.capturePhoto(videoEl);
       finalizeCameraCapture({ type: 'photo', dataUrl });
       break;
     }
+
     case 'camera-record-toggle':
       handleRecordToggle();
       break;
@@ -1102,21 +1134,55 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('change', (e) => {
   if (!e.target.dataset) return;
-  if (e.target.dataset.action === 'filter-category') { state.filters.category = e.target.value; render(); }
-  if (e.target.dataset.action === 'filter-status') { state.filters.status = e.target.value; render(); }
-  if (e.target.dataset.action === 'filter-sort') { state.filters.sort = e.target.value; render(); }
-  if (e.target.dataset.action === 'admin-filter-role') { state.adminFilters.role = e.target.value; render(); }
-  if (e.target.id === 'media-input') { handleMediaFileSelect(e.target); }
-  if (e.target.id === 'profile-photo-input') { handleProfilePhotoFileSelect(e.target); }
+
+  if (e.target.dataset.action === 'filter-category') {
+    state.filters.category = e.target.value;
+    render();
+  }
+
+  if (e.target.dataset.action === 'filter-status') {
+    state.filters.status = e.target.value;
+    render();
+  }
+
+  if (e.target.dataset.action === 'filter-sort') {
+    state.filters.sort = e.target.value;
+    render();
+  }
+
+  if (e.target.dataset.action === 'admin-filter-role') {
+    state.adminFilters.role = e.target.value;
+    render();
+  }
+
+  if (e.target.id === 'media-input') {
+    handleMediaFileSelect(e.target);
+  }
+
+  if (e.target.id === 'profile-photo-input') {
+    handleProfilePhotoFileSelect(e.target);
+  }
 
   const createForm = e.target.closest('form[data-action="submit-create"]');
-  if (createForm && e.target.name === 'category') persistDraftFromForm(createForm);
+  if (createForm && e.target.name === 'category') {
+    persistDraftFromForm(createForm);
+  }
 });
 
 document.addEventListener('input', (e) => {
   if (!e.target.dataset) return;
-  if (e.target.dataset.action === 'filter-search') { state.filters.search = e.target.value; render(); focusSearchEnd(); }
-  if (e.target.dataset.action === 'admin-filter-search') { state.adminFilters.search = e.target.value; render(); focusSearchEnd(true); }
+
+  if (e.target.dataset.action === 'filter-search') {
+    state.filters.search = e.target.value;
+    render();
+    focusSearchEnd();
+  }
+
+  if (e.target.dataset.action === 'admin-filter-search') {
+    state.adminFilters.search = e.target.value;
+    render();
+    focusSearchEnd(true);
+  }
 
   // salva o rascunho da denúncia silenciosamente, sem re-renderizar (preserva o foco/cursor)
   const createForm = e.target.closest('form[data-action="submit-create"]');
@@ -1124,87 +1190,124 @@ document.addEventListener('input', (e) => {
 });
 
 function focusSearchEnd(isAdmin) {
-  const sel = isAdmin ? '[data-action="admin-filter-search"]' : '[data-action="filter-search"]';
+  const sel = isAdmin
+    ? '[data-action="admin-filter-search"]'
+    : '[data-action="filter-search"]';
+
   const input = document.querySelector(sel);
-  if (input) { input.focus(); const v = input.value; input.value = ''; input.value = v; }
+
+  if (input) {
+    input.focus();
+    const v = input.value;
+    input.value = '';
+    input.value = v;
+  }
 }
 
-document.addEventListener('submit', (e) => {
+document.addEventListener('submit', async (e) => {
   const form = e.target.closest('form[data-action]');
   if (!form) return;
+
   e.preventDefault();
+
   const action = form.dataset.action;
   const data = Object.fromEntries(new FormData(form).entries());
 
   switch (action) {
     case 'submit-login': {
-      const res = login(data);
+      const res = await login(data);
+
       if (!res.ok) return showToast(res.msg, 'error');
+
       state.screen = 'dashboard';
       render();
       showToast(`Bem-vindo, ${res.user.name.split(' ')[0]}!`, 'success');
       break;
     }
+
     case 'submit-register': {
-      const res = registerCitizen(data);
+      const res = await registerCitizen(data);
+
       if (!res.ok) return showToast(res.msg, 'error');
+
       state.screen = 'dashboard';
       render();
       showToast('Conta criada com sucesso!', 'success');
       break;
     }
+
     case 'submit-create': {
       const res = createDenuncia({ ...data, media: state.pendingMedia });
+
       if (!res.ok) return showToast(res.msg, 'error');
+
       const u = currentUser();
       if (u) clearDraft(u.id);
+
       state.draft = null;
       state.pendingMedia = null;
+
       go('detail', { selectedId: res.denuncia.id });
       showToast('Denúncia publicada!', 'success');
       break;
     }
+
     case 'submit-comment': {
       addComment(form.dataset.id, data.text);
       form.reset();
       render();
       break;
     }
+
     case 'submit-reply': {
       addComment(form.dataset.id, data.text, form.dataset.parent);
       state.replyingTo = null;
       render();
       break;
     }
+
     case 'admin-status': {
       adminSetStatus(form.dataset.id, data.status);
       render();
       showToast('Status atualizado.', 'success');
       break;
     }
+
     case 'admin-respond': {
       const res = adminRespond(form.dataset.id, data.response || '');
-      if (res && res.ok === false) return showToast('Escreva uma resposta antes de publicar.', 'error');
+
+      if (res && res.ok === false) {
+        return showToast('Escreva uma resposta antes de publicar.', 'error');
+      }
+
       render();
       showToast('Resposta oficial publicada.', 'success');
       break;
     }
+
     case 'submit-create-user': {
       const res = createUserByAdmin(data);
+
       if (!res.ok) return showToast(res.msg, 'error');
+
       closeModal();
       render();
       showToast('Usuário criado com sucesso.', 'success');
       break;
     }
+
     case 'submit-reset-password': {
       const res = resetUserPassword(form.dataset.id, data.password);
+
       if (!res.ok) return showToast(res.msg, 'error');
+
       closeModal();
       showToast('Senha redefinida com sucesso.', 'success');
       break;
     }
-    default: break;
+
+    default:
+      break;
   }
 });
 

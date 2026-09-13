@@ -10,6 +10,7 @@ const DB = {
   DENUNCIAS: 'ac_denuncias',
   SESSION: 'ac_session',
   NOTIFICATIONS: 'ac_notifications',
+  TOKEN: 'ac_token',
 };
 
 const CATEGORIES = {
@@ -235,42 +236,120 @@ function clearDraft(userId) {
 
 /* ---------------- ações de autenticação ---------------- */
 
-function registerCitizen({ name, email, password }) {
-  name = name.trim(); email = email.trim();
-  if (!name || !email || !password) return { ok: false, msg: 'Preencha todos os campos.' };
-  if (password.length < 4) return { ok: false, msg: 'A senha deve ter ao menos 4 caracteres.' };
-  if (findUserByEmail(email)) return { ok: false, msg: 'Já existe uma conta com esse e-mail.' };
+async function registerCitizen({ name, email, password }) {
+  name = (name || '').trim();
+  email = (email || '').trim();
+  if (!name  || !email || !password) { 
+    return { ok: false, msg: 'Preencha todos os campos.' };
+  }
+  if (password.length < 4) { 
+    return { ok: false, msg: 'Senha deve ter ao menos 4 caracteres.' };
+  }
+  try {
+    const response = await fetch('http://localhost:3333/api/auth/register', {
+      method: 'POST',
+    headers: {
+       'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, email, password }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    return {
+      ok: false,
+      msg: 'Não foi possivel realizar o cadastro.',
+    };
+  }
 
-  const user = { id: uid('u'), name, email, password, role: 'cidadao', photo: null, createdAt: nowISO() };
-  const users = getUsers();
+  localStorage.setItem(DB.TOKEN, data.token);
+
+const user = {
+  id: data.user.id,
+  name: data.user.name,
+  email: data.user.email,
+  role: data.user.role.toLowerCase(),
+  photo: data.user.photoUrl || null,
+  createdAt: data.user.createdAt,
+};
+
+const users = getUsers();
+const existingUser = users.find(u => u.id === user.id);
+
+if (!existingUser) {
   users.push(user);
   saveUsers(users);
-  setSession(user.id);
-  return { ok: true, user };
 }
 
-function login({ email, password }) {
-  const user = findUserByEmail((email || '').trim());
-  if (!user || user.password !== password) return { ok: false, msg: 'E-mail ou senha inválidos.' };
-  setSession(user.id);
-  return { ok: true, user };
+setSession(user.id);
+
+return {
+  ok: true,
+  user,
+};
+} catch (error) {
+  return {
+    ok: false,
+    msg:'Não foi possivel conectar ao servidor.',
+  };
 }
+}
+async function login({ email, password }) {
+  email = (email || '').trim();
+  if (!email || !password) {
+    return { ok: false, msg: 'Preencha todos os campos.' };
+  }
+  try {
+    const response = await fetch('http://localhost:3333/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      return {
+        ok: false,
+        msg: data.message || 'E-mail ou senha inválidos.',
+      };
+    }
+    
+    localStorage.setItem(DB.TOKEN, data.token);
 
-function logout() { clearSession(); }
+const user = {
+  id: data.user.id,
+  name: data.user.name,
+  email: data.user.email,
+  role: data.user.role.toLowerCase(),
+  photo: data.user.photoUrl || null,
+  createdAt: data.user.createdAt,
+};
 
-function createUserByAdmin({ name, email, password, role }) {
-  name = (name || '').trim(); email = (email || '').trim();
-  if (!name || !email || !password || !role) return { ok: false, msg: 'Preencha todos os campos.' };
-  if (findUserByEmail(email)) return { ok: false, msg: 'Já existe uma conta com esse e-mail.' };
-  if (!['admin', 'moderador', 'superadmin'].includes(role)) return { ok: false, msg: 'Função inválida.' };
+const users = getUsers();
+const existingUser = users.find(u => u.id === user.id);
 
-  const user = { id: uid('u'), name, email, password, role, photo: null, createdAt: nowISO() };
-  const users = getUsers();
+if (!existingUser) {
   users.push(user);
   saveUsers(users);
-  return { ok: true, user };
 }
 
+setSession(user.id);
+
+return {
+  ok: true,
+  user,
+};
+  } catch (error) {
+    return {
+      ok: false,
+      msg:'Não foi possivel conectar ao servidor.',
+    };
+  }
+}
+function logout() {
+  localStorage.removeItem(DB.TOKEN);
+  clearSession();
+}
 function resetUserPassword(userId, newPassword) {
   const users = getUsers();
   const u = users.find(x => x.id === userId);
