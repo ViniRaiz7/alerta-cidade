@@ -25,6 +25,9 @@ const state = {
 };
 
 const app = document.getElementById('app');
+let locationMap = null;
+let locationMarker = null;
+let locationLookupId = 0;
 
 function go(screen, extra) {
   state.screen = screen;
@@ -106,6 +109,13 @@ function avatarHTML(userId, fallbackName, sizeClass) {
 function render() {
   const user = currentUser();
   if (!user) { state.screen = 'auth'; }
+  else if (state.screen === 'auth') { state.screen = 'dashboard'; }
+
+  if (locationMap) {
+    locationMap.remove();
+    locationMap = null;
+    locationMarker = null;
+  }
 
   let body = '';
   if (!user) {
@@ -129,7 +139,7 @@ function render() {
   // e um MediaStream ativos), um render() disparado por outro motivo (ex.:
   // o toast expirando) não deve destruir esse elemento no meio da captura.
   app.innerHTML = body + toastHTML();
-  if (state.screen === 'create') setTimeout(() => LocationMap.init(), 0);
+  if (state.screen === 'create') initializeLocationMap();
 }
 
 /* ---------------- navegação ---------------- */
@@ -409,7 +419,7 @@ function createScreen(user) {
   return `
   <div class="page-narrow">
     <button class="back-link" data-action="go" data-screen="dashboard">${ICONS.back} Voltar ao painel</button>
-    <div class="page-head" style="margin-bottom:6px;">
+    <div class="page-head create-page-head">
       <div>
         <h1>Registrar nova denúncia</h1>
         <p class="muted">Dê o máximo de detalhes possível — isso ajuda a prefeitura a agir mais rápido.</p>
@@ -436,7 +446,7 @@ function createScreen(user) {
       <div class="field location-picker-field">
         <div class="location-picker-head">
           <span>Marque o ponto exato no mapa</span>
-          <button type="button" class="btn btn-outline btn-sm" data-action="use-my-location">Usar minha localização</button>
+          <button type="button" class="btn btn-outline btn-sm" data-action="use-current-location">Usar minha localização</button>
         </div>
         <div id="location-map" class="location-map" aria-label="Mapa para marcar a localização da denúncia"></div>
         <small class="field-hint">Clique no mapa ou arraste o marcador. O endereço acima continua sendo usado como referência.</small>
@@ -455,6 +465,78 @@ function createScreen(user) {
       <button type="submit" class="btn btn-primary btn-block">Publicar denúncia</button>
     </form>
   </div>`;
+}
+
+function initializeLocationMap() {
+  const mapElement = document.getElementById('location-map');
+  if (!mapElement || !window.L) return;
+
+  const draft = state.draft || {};
+  const defaultCenter = [-15.7801, -47.9292];
+  const hasDraftCoordinates = Number.isFinite(Number(draft.latitude)) && Number.isFinite(Number(draft.longitude));
+  const center = hasDraftCoordinates ? [Number(draft.latitude), Number(draft.longitude)] : defaultCenter;
+
+  locationMap = L.map(mapElement).setView(center, hasDraftCoordinates ? 16 : 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(locationMap);
+
+  if (hasDraftCoordinates) setLocationMarker(center[0], center[1], false);
+  locationMap.on('click', (event) => setLocationMarker(event.latlng.lat, event.latlng.lng, true));
+}
+
+function setLocationMarker(latitude, longitude, centerMap) {
+  if (!locationMap) return;
+  if (locationMarker) locationMarker.setLatLng([latitude, longitude]);
+  else locationMarker = L.marker([latitude, longitude]).addTo(locationMap);
+  if (centerMap) locationMap.setView([latitude, longitude], 16);
+
+  const form = document.querySelector('form[data-action="submit-create"]');
+  const input = form && form.elements.location;
+  if (!input) return;
+  input.value = `Coordenadas: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+  state.draft = { ...state.draft, latitude, longitude };
+  persistDraftFromForm(form);
+  reverseGeocode(latitude, longitude, input, ++locationLookupId);
+}
+
+async function reverseGeocode(latitude, longitude, input, lookupId) {
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=pt-BR`);
+    if (!response.ok) return;
+    const result = await response.json();
+    const address = result.display_name;
+    if (!address || !input.isConnected || lookupId !== locationLookupId) return;
+    input.value = `${address} (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`.slice(0, 140);
+    persistDraftFromForm(input.form);
+  } catch (error) {
+    // As coordenadas já foram preenchidas; o endereço é apenas complementar.
+  }
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    showToast('Seu navegador não oferece geolocalização.', 'error');
+    return;
+  }
+
+  const form = document.querySelector('form[data-action="submit-create"]');
+  const input = form && form.elements.location;
+  if (input) {
+    input.value = 'Obtendo sua localização atual...';
+    state.draft = { ...state.draft, location: '' };
+    persistDraftFromForm(form);
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => setLocationMarker(coords.latitude, coords.longitude, true),
+    () => {
+      if (input && input.isConnected) input.value = '';
+      showToast('Não foi possível acessar sua localização.', 'error');
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
 }
 
 function mediaPickerHTML() {
@@ -1090,6 +1172,10 @@ document.addEventListener('click', (e) => {
 
     case 'remove-media':
       setDraftMedia(null);
+      break;
+
+    case 'use-current-location':
+      useCurrentLocation();
       break;
 
     /* ---- foto de perfil ---- */
