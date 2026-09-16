@@ -4,7 +4,8 @@
 
 function sanitizeUser(user) {
   if (!user) return null;
-  const { password, ...safe } = user;
+  const safe = { ...user };
+  delete safe.password;
   return safe;
 }
 

@@ -5,7 +5,6 @@
 
 require('express-async-errors'); // permite `async (req, res) => { throw ... }` sem try/catch manual
 
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

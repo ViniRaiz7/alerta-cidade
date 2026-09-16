@@ -129,6 +129,7 @@ function render() {
   // e um MediaStream ativos), um render() disparado por outro motivo (ex.:
   // o toast expirando) não deve destruir esse elemento no meio da captura.
   app.innerHTML = body + toastHTML();
+  if (state.screen === 'create') setTimeout(() => LocationMap.init(), 0);
 }
 
 /* ---------------- navegação ---------------- */
@@ -432,6 +433,16 @@ function createScreen(user) {
         <span>Localização*</span>
         <input type="text" name="location" placeholder="Rua, número, bairro ou ponto de referência" required maxlength="140" value="${escapeHTML(draft.location || '')}">
       </label>
+      <div class="field location-picker-field">
+        <div class="location-picker-head">
+          <span>Marque o ponto exato no mapa</span>
+          <button type="button" class="btn btn-outline btn-sm" data-action="use-my-location">Usar minha localização</button>
+        </div>
+        <div id="location-map" class="location-map" aria-label="Mapa para marcar a localização da denúncia"></div>
+        <small class="field-hint">Clique no mapa ou arraste o marcador. O endereço acima continua sendo usado como referência.</small>
+        <input type="hidden" name="latitude" value="${escapeHTML(draft.latitude || '')}">
+        <input type="hidden" name="longitude" value="${escapeHTML(draft.longitude || '')}">
+      </div>
       <label class="field">
         <span>Descrição*</span>
         <textarea name="description" rows="4" placeholder="Descreva o problema com detalhes..." required maxlength="600">${escapeHTML(draft.description || '')}</textarea>
@@ -499,6 +510,7 @@ function detailScreen(user) {
         </div>
         <h1 class="detail-title">${escapeHTML(d.title)}</h1>
         <div class="card-meta">${ICONS.pin}<span>${escapeHTML(d.location)}</span></div>
+        ${d.latitude && d.longitude ? `<a class="map-link" href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(d.latitude)}&mlon=${encodeURIComponent(d.longitude)}#map=18/${encodeURIComponent(d.latitude)}/${encodeURIComponent(d.longitude)}" target="_blank" rel="noopener">${ICONS.pin} Ver ponto no mapa</a>` : ''}
         <p class="detail-desc">${escapeHTML(d.description)}</p>
         <div class="detail-author">Relatado por <b>${escapeHTML(d.authorName)}</b> em ${formatDate(d.createdAt)}</div>
 
@@ -977,6 +989,10 @@ document.addEventListener('click', (e) => {
       render();
       break;
 
+    case 'use-my-location':
+      LocationMap.useCurrentLocation();
+      break;
+
     case 'logout':
       logout();
       state.screen = 'auth';
@@ -1314,4 +1330,5 @@ document.addEventListener('submit', async (e) => {
 /* ---------------- inicialização ---------------- */
 
 ensureSeedData();
+if (currentUser()) state.screen = 'dashboard';
 render();

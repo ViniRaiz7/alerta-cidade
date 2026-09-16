@@ -19,5 +19,5 @@ RUN mkdir -p uploads/avatars uploads/denuncias
 
 EXPOSE 3333
 
-# aplica migrações pendentes e só então sobe o servidor
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# sincroniza o schema disponível e só então sobe o servidor
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]

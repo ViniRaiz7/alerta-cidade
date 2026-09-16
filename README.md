@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # AlertaCidade
 
 Sistema de denúncias urbanas colaborativas: cidadãos registram problemas
@@ -52,9 +51,6 @@ docker compose up --build
 ```
 
 Isso sobe:
-- **PostgreSQL** em `localhost:5432`
-- **API** em `http://localhost:3333`
-- **Front-end** estático em `http://localhost:8080`
 
 Para popular o banco com contas de teste:
 
@@ -85,21 +81,14 @@ npm run dev
 
 ## Padrões seguidos
 
-- **Separação por responsabilidade em ambas as pontas**: no front, dados
   (`data.js`) / interface (`ui.js`) / câmera (`camera.js`) não se misturam;
   no back, `controllers` → `services` → `routes` → `middlewares` seguem a
   separação convencional de uma API Express.
-- **Banco relacional com ORM tipado** (Prisma + PostgreSQL) em vez de
   SQLite ou acesso a banco "cru", como pedido — migrações versionadas em
   `backend/prisma/`.
-- **Autenticação por JWT com papéis** (`CIDADAO`, `MODERADOR`, `ADMIN`,
   `SUPERADMIN`), autorização por rota, senhas sempre com hash (bcrypt),
   nunca devolvidas pela API.
-- **Validação de entrada centralizada** (Zod no backend) em vez de checagem
   solta espalhada pelos controllers.
-- **Containerização** com `Dockerfile` (backend) e `docker-compose.yml`
   (projeto completo), para reproduzir o ambiente de forma idêntica em
   qualquer máquina.
-=======
-# alerta-cidade
->>>>>>> db7fdae9a90f6d86d5adf10caea0b1693b0db4a1
+**Containerização** com `Dockerfile` (projeto completo), para reproduzir o ambiente de forma idêntica em
